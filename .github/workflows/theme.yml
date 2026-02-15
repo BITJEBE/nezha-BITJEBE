@@ -1,0 +1,86 @@
+name: Build Theme Package
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm i
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Update theme configuration
+      run: |
+        # Get current date in YY.MM.DD format
+        VERSION_DATE=$(date +"%y.%m.%d")
+        # Get commit hash (short)
+        COMMIT_HASH=$(git rev-parse --short HEAD)
+        
+        echo "VERSION_DATE=${VERSION_DATE}" >> $GITHUB_ENV
+        echo "COMMIT_HASH=${COMMIT_HASH}" >> $GITHUB_ENV
+        
+        # Update komari-theme.json with new version and description
+        jq --arg version "$VERSION_DATE" \
+           --arg desc "Preview theme for Komari Monitor (commit: $COMMIT_HASH)" \
+           '.version = $version | .description = $desc' \
+           komari-theme.json > komari-theme-updated.json
+        
+        mv komari-theme-updated.json komari-theme.json
+        
+        echo "Updated theme configuration:"
+        cat komari-theme.json
+        
+    - name: Verify required files exist
+      run: |
+        echo "Checking required files..."
+        ls -la preview.png || (echo "preview.png not found" && exit 1)
+        ls -la komari-theme.json || (echo "komari-theme.json not found" && exit 1)
+        ls -la dist/ || (echo "dist/ directory not found" && exit 1)
+        echo "All required files found!"
+        
+    - name: Create theme package
+      run: |
+        # Create a temporary directory for the package
+        mkdir -p theme-package
+        
+        # Copy required files
+        cp preview.png theme-package/
+        cp komari-theme.json theme-package/
+        cp -r dist/ theme-package/
+        
+        # Create zip file with version and commit hash
+        ZIP_NAME="komari-theme-v${VERSION_DATE}-${COMMIT_HASH}.zip"
+        
+        cd theme-package
+        zip -r ../${ZIP_NAME} .
+        cd ..
+        
+        echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_ENV
+        echo "Created package: ${ZIP_NAME}"
+        ls -la ${ZIP_NAME}
+        
+    - name: Upload theme as artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: komari-theme-v${{ env.VERSION_DATE }}-${{ env.COMMIT_HASH }}
+        path: |
+          preview.png
+          komari-theme.json
+          dist/
+        retention-days: 90

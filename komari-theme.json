@@ -1,0 +1,114 @@
+{
+    "name": "nezha-BITJEBE",
+    "short": "nezha-BITJEBE",
+    "description": "nezha-BITJEBE Theme for Komari Monitor",
+    "version": "1.0.0",
+    "author": "BITJEBE",
+    "url": "https://github.com/BITJEBE/nezha-BITJEBE",
+    "preview": "preview.png",
+    "configuration": {
+        "type": "managed",
+        "data": [
+            {
+                "name": "外观设置",
+                "type": "title"
+            },
+            {
+                "key": "CustomBackgroundImage",
+                "name": "背景图片",
+                "type": "input",
+                "default": "",
+                "help": "桌面端背景图片URL，留空则不显示背景图。支持图片直链或随机图API。"
+            },
+            {
+                "key": "CustomMobileBackgroundImage",
+                "name": "移动端背景图片",
+                "type": "input",
+                "default": "",
+                "help": "移动端单独的背景图片URL，留空则跟随桌面端设置。"
+            },
+            {
+                "key": "CustomLogo",
+                "name": "站点Logo",
+                "type": "input",
+                "default": "/favicon.ico",
+                "help": "站点Logo图片URL，显示在左上角和浏览器标签页。"
+            },
+            {
+                "key": "CustomIllustration",
+                "name": "自定义插图",
+                "type": "input",
+                "default": "",
+                "help": "首页右侧的自定义插图URL，留空使用默认插图。"
+            },
+            {
+                "key": "ForceTheme",
+                "name": "强制主题",
+                "type": "select",
+                "options": "跟随系统,dark,light",
+                "default": "跟随系统",
+                "help": "强制使用指定主题模式，选择'跟随系统'则由用户自行切换。"
+            },
+            {
+                "name": "功能设置",
+                "type": "title"
+            },
+            {
+                "key": "CustomLinks",
+                "name": "自定义链接",
+                "type": "input",
+                "default": "",
+                "help": "JSON格式的自定义链接数组，显示在顶部导航栏。格式: [{\"link\":\"https://example.com\",\"name\":\"示例\"}]"
+            },
+            {
+                "key": "ForceShowServices",
+                "name": "显示服务监控",
+                "type": "switch",
+                "default": false,
+                "help": "开启后在首页显示ServiceTracker服务监控面板（30天可用性监控）。"
+            },
+            {
+                "key": "ForceShowMap",
+                "name": "显示全球地图",
+                "type": "switch",
+                "default": false,
+                "help": "开启后在首页显示服务器全球分布地图。"
+            },
+            {
+                "key": "ForceCardInline",
+                "name": "行内卡片模式",
+                "type": "switch",
+                "default": false,
+                "help": "开启后服务器卡片使用紧凑的行内布局模式。"
+            },
+            {
+                "key": "DisableAnimatedMan",
+                "name": "禁用动画插图",
+                "type": "switch",
+                "default": true,
+                "help": "开启后隐藏首页的动画人物插图。默认已开启（隐藏）。"
+            },
+            {
+                "key": "ForceUseSvgFlag",
+                "name": "使用SVG国旗",
+                "type": "switch",
+                "default": false,
+                "help": "开启后使用SVG国旗图标替代Emoji国旗，在部分系统上显示效果更好。"
+            },
+            {
+                "key": "ShowTrafficBar",
+                "name": "显示流量进度条",
+                "type": "switch",
+                "default": true,
+                "help": "开启后在服务器卡片上显示流量使用进度条（需后台配置流量限额）。"
+            },
+            {
+                "key": "ForcePeakCutEnabled",
+                "name": "网络图表削峰",
+                "type": "switch",
+                "default": false,
+                "help": "开启后网络流量图表会自动裁剪异常峰值，使图表更易读。"
+            }
+        ]
+    }
+}
