@@ -70,41 +70,54 @@ export function getDaysBetweenDatesWithAutoRenewal({ autoRenewal, cycle, startDa
   // 套餐资费
   let cycleLabel = cycle
 
-  switch (cycle.toLowerCase()) {
-    case "月":
-    case "m":
-    case "mo":
-    case "month":
-    case "monthly":
-      cycleLabel = "月"
-      months = 1
-      break
-    case "年":
-    case "y":
-    case "yr":
-    case "year":
-    case "annual":
-      cycleLabel = "年"
-      months = 12
-      break
-    case "季":
-    case "q":
-    case "qr":
-    case "quarterly":
-      cycleLabel = "季"
-      months = 3
-      break
-    case "半":
-    case "半年":
-    case "h":
-    case "half":
-    case "semi-annually":
-      cycleLabel = "半年"
-      months = 6
-      break
-    default:
-      cycleLabel = cycle
-      break
+  const cycleLower = cycle.toLowerCase()
+  const yearsMatch = cycleLower.match(/^(\d+)年$/)
+
+  if (yearsMatch) {
+    const y = parseInt(yearsMatch[1])
+    cycleLabel = cycle
+    months = y * 12
+  } else {
+    switch (cycleLower) {
+      case "月":
+      case "m":
+      case "mo":
+      case "month":
+      case "monthly":
+        cycleLabel = "月"
+        months = 1
+        break
+      case "年":
+      case "y":
+      case "yr":
+      case "year":
+      case "annual":
+        cycleLabel = "年"
+        months = 12
+        break
+      case "季":
+      case "q":
+      case "qr":
+      case "quarterly":
+        cycleLabel = "季"
+        months = 3
+        break
+      case "半":
+      case "半年":
+      case "h":
+      case "half":
+      case "semi-annually":
+        cycleLabel = "半年"
+        months = 6
+        break
+      case "一次性":
+        cycleLabel = "一次性"
+        months = 1
+        break
+      default:
+        cycleLabel = cycle
+        break
+    }
   }
 
   const nowTime = new Date().getTime()
@@ -353,14 +366,17 @@ const countryFlagToCode = (flag: string): string => {
 
 // 根据 common:getNodes 的字段构造/合并公开备注（public_note）
 // 目标结构：{ billingDataMod: { startDate,endDate,autoRenewal,cycle,amount }, planDataMod: { bandwidth,trafficVol,trafficType,IPv4,IPv6,networkRoute,extra } }
+const CYCLE_MAP: Record<number, string> = { 30: "月", 92: "季", 184: "半年", 365: "年", 730: "二年", 1095: "三年", 1825: "五年" }
+
 function deriveCycleLabel(billing_cycle?: number): string {
   const bc = Number(billing_cycle || 0)
   if (!bc) return ""
-  if (bc >= 360) return "年"
-  if (bc >= 180) return "半年"
-  if (bc >= 90) return "季"
-  if (bc >= 30) return "月"
-  if (bc == -1) return "一次性"
+  if (bc === -1 || bc === 0) return "一次性"
+  for (const [days, label] of Object.entries(CYCLE_MAP)) {
+    if (Math.abs(bc - Number(days)) <= 3) return label
+  }
+  const y = Math.round(bc / 365)
+  if (y >= 1 && y <= 10) return y === 1 ? "年" : `${y}年`
   return `${bc}天`
 }
 
