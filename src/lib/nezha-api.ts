@@ -138,15 +138,25 @@ export const fetchMonitor = async (server_id: number, hours: number = 24): Promi
 
     const rawVals = zip.map((z) => z.v)
 
-    // 计算真实丢包率：基于滑动窗口内 -1（失败）记录的比例
-    const windowSize = Math.max(5, Math.min(30, Math.ceil(rawVals.length / 50)))
-    const packetLoss: number[] = rawVals.map((_, i) => {
-      const start = Math.max(0, i - Math.floor(windowSize / 2))
-      const end = Math.min(rawVals.length, i + Math.ceil(windowSize / 2))
-      const window = rawVals.slice(start, end)
-      const lostCount = window.filter((v) => v === -1).length
-      return Number(((lostCount / window.length) * 100).toFixed(2))
-    })
+    // 计算真实丢包率：使用双向指数移动平均（EMA），丢包点自然升高并衰减
+    const rawLoss = rawVals.map((v) => (v === -1 ? 100 : 0))
+    const alpha = 0.1
+    // 正向 EMA
+    const forward: number[] = []
+    let emaF = 0
+    for (let i = 0; i < rawLoss.length; i++) {
+      emaF = alpha * rawLoss[i] + (1 - alpha) * emaF
+      forward.push(emaF)
+    }
+    // 反向 EMA
+    const backward: number[] = new Array(rawLoss.length)
+    let emaB = 0
+    for (let i = rawLoss.length - 1; i >= 0; i--) {
+      emaB = alpha * rawLoss[i] + (1 - alpha) * emaB
+      backward[i] = emaB
+    }
+    // 取两个方向的较大值，形成对称的丢包曲线
+    const packetLoss = forward.map((f, i) => Number(Math.max(f, backward[i]).toFixed(2)))
 
     // 对延迟数据：将 -1 替换为上一个正常值（平滑显示）
     const delays: number[] = []
