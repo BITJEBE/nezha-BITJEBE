@@ -316,7 +316,7 @@ export const fetchService = async (): Promise<ServiceResponse> => {
         type: "ping",
         uuid,
         hours: 720,
-        maxCount: 1000,
+        maxCount: 300,
       })
       const tasks: any[] = result?.tasks || []
       const records: any[] = result?.records || []

@@ -103,15 +103,11 @@ export function NetworkChart({ server_id, show }: { server_id: number; show: boo
 
   if (!monitorData) return <NetworkChartLoading />
 
-  if (monitorData?.success && !monitorData.data) {
+  if (monitorData?.success && (!monitorData.data || monitorData.data.length === 0)) {
     return (
-      <>
-        <div className="flex flex-col items-center justify-center">
-          <p className="text-sm font-medium opacity-40"></p>
-          <p className="text-sm font-medium opacity-40 mb-4">{t("monitor.noData")}</p>
-        </div>
-        <NetworkChartLoading />
-      </>
+      <div className="flex flex-col items-center justify-center py-16">
+        <p className="text-sm font-medium text-muted-foreground">{t("monitor.noData", "该服务器未配置延迟检测")}</p>
+      </div>
     )
   }
 
