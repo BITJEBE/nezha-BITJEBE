@@ -40,8 +40,9 @@ jobs:
           echo "COMMIT_HASH=${COMMIT_HASH}" >> $GITHUB_ENV
           echo "RELEASE_VERSION=${RELEASE_VERSION}" >> $GITHUB_ENV
 
-          # Write release version (tag) to komari-theme.json, keep description unchanged
-          jq --arg version "$RELEASE_VERSION" \
+          # Write release version (tag) to komari-theme.json, strip leading 'v' prefix
+          CLEAN_VERSION="${RELEASE_VERSION#v}"
+          jq --arg version "$CLEAN_VERSION" \
              '.version = $version' \
              komari-theme.json > komari-theme-updated.json
 
