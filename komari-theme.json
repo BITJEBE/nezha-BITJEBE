@@ -2,7 +2,7 @@
     "name": "nezha-BITJEBE",
     "short": "nezha-BITJEBE",
     "description": "nezha-BITJEBE Theme for Komari Monitor",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "author": "BITJEBE",
     "url": "https://github.com/BITJEBE/nezha-BITJEBE",
     "preview": "preview.png",
@@ -126,6 +126,13 @@
                 "type": "switch",
                 "default": false,
                 "help": "开启后在服务器卡片底部显示上传和下载总流量。"
+            },
+            {
+                "key": "HideIPv4IPv6Tag",
+                "name": "隐藏IPv4/IPv6标签",
+                "type": "switch",
+                "default": false,
+                "help": "开启后隐藏服务器卡片上默认显示的IPv4和IPv6标签。"
             },
             {
                 "name": "流量进度条设置",

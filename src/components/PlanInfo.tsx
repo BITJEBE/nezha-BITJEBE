@@ -62,6 +62,8 @@ export default function PlanInfo({ parsedData }: { parsedData: PublicNoteData })
     return null
   }
 
+  const hideIPv4IPv6 = (window as unknown as Record<string, unknown>).HideIPv4IPv6Tag === true
+
   const extraList = parsedData.planDataMod.extra
     .split(",")
     .map((s) => s.trim())
@@ -79,14 +81,14 @@ export default function PlanInfo({ parsedData }: { parsedData: PublicNoteData })
           {parsedData.planDataMod.trafficVol}
         </p>
       )}
-      {parsedData.planDataMod.IPv4 === "1" && (
+      {!hideIPv4IPv6 && parsedData.planDataMod.IPv4 === "1" && (
         <p
           className={cn("text-[9px] bg-purple-600 text-purple-200 dark:bg-purple-800 dark:text-purple-300  w-fit rounded-[5px] px-[3px] py-[1.5px]")}
         >
           IPv4
         </p>
       )}
-      {parsedData.planDataMod.IPv6 === "1" && (
+      {!hideIPv4IPv6 && parsedData.planDataMod.IPv6 === "1" && (
         <p className={cn("text-[9px] bg-pink-600 text-pink-200 dark:bg-pink-800 dark:text-pink-300  w-fit rounded-[5px] px-[3px] py-[1.5px]")}>
           IPv6
         </p>
