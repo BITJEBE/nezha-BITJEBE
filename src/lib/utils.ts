@@ -294,7 +294,7 @@ const CURRENCY_LABELS: Record<string, string> = {
   "\uffe5": "\uffe5",
 }
 
-function normalizeBillingCurrency(currency?: unknown): string {
+export function normalizeBillingCurrency(currency?: unknown): string {
   const raw = typeof currency === "string" ? currency.trim() : ""
   if (!raw) return ""
 
@@ -304,6 +304,9 @@ function normalizeBillingCurrency(currency?: unknown): string {
   if (["CNY", "RMB", "CN\u00a5", "CN\uffe5"].includes(compact) || raw.includes("\u4eba\u6c11\u5e01")) return "CNY"
   if (["JPY", "JP\u00a5", "JP\uffe5"].includes(compact) || raw.includes("\u65e5\u5143") || raw.includes("\u5186")) return "JPY"
 
+  if (compact === "$") return "USD"
+  if (compact === "\u20ac") return "EUR"
+  if (compact === "\u00a3") return "GBP"
   if (compact === "US$") return "USD"
   if (compact === "HK$") return "HKD"
   if (compact === "NT$") return "TWD"
@@ -311,7 +314,7 @@ function normalizeBillingCurrency(currency?: unknown): string {
   return compact || raw
 }
 
-function stripCurrencyMarks(amount: string): string {
+export function stripCurrencyMarks(amount: string): string {
   return amount
     .trim()
     .replace(
@@ -323,6 +326,17 @@ function stripCurrencyMarks(amount: string): string {
       "",
     )
     .trim()
+}
+
+export function parseBillingAmountNumber(amount: string): number | null {
+  const rawAmount = String(amount || "").trim()
+  if (!rawAmount || rawAmount === "-1") {
+    return null
+  }
+
+  const normalized = stripCurrencyMarks(rawAmount).replace(/,/g, "")
+  const value = Number(normalized)
+  return Number.isFinite(value) ? value : null
 }
 
 export function formatBillingAmount(amount: string, currency?: string): string {

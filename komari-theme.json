@@ -2,7 +2,7 @@
     "name": "nezha-BITJEBE",
     "short": "nezha-BITJEBE",
     "description": "nezha-BITJEBE Theme for Komari Monitor",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "author": "BITJEBE",
     "url": "https://github.com/BITJEBE/nezha-BITJEBE",
     "preview": "preview.png",
@@ -101,6 +101,28 @@
                 "type": "switch",
                 "default": true,
                 "help": "开启后在服务器卡片上显示流量使用进度条（需后台配置流量限额）。"
+            },
+            {
+                "key": "ShowVisitorCapsule",
+                "name": "显示访客胶囊",
+                "type": "switch",
+                "default": false,
+                "help": "开启后在页面底部短暂显示访客 IP、地区和运营商信息。"
+            },
+            {
+                "key": "ShowAssetCard",
+                "name": "显示资产卡片",
+                "type": "switch",
+                "default": false,
+                "help": "开启后显示右上角资产统计浮窗，账单金额会使用默认货币和服务器货币覆盖配置。"
+            },
+            {
+                "key": "AssetCardDefaultCurrency",
+                "name": "资产卡片默认币种",
+                "type": "select",
+                "options": "CNY,USD,HKD,EUR,GBP,JPY",
+                "default": "CNY",
+                "help": "资产卡片汇总金额的默认显示币种，访客仍可在资产卡片内临时切换。"
             },
             {
                 "key": "ForcePeakCutEnabled",

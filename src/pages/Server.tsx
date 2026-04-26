@@ -1,9 +1,11 @@
+import AssetSummaryWidget from "@/components/AssetSummaryWidget"
 import GlobalMap from "@/components/GlobalMap"
 import GroupSwitch from "@/components/GroupSwitch"
 import ServerCard from "@/components/ServerCard"
 import ServerCardInline from "@/components/ServerCardInline"
 import ServerOverview from "@/components/ServerOverview"
 import { ServiceTracker } from "@/components/ServiceTracker"
+import VisitorCapsuleBar from "@/components/VisitorCapsuleBar"
 import { Loader } from "@/components/loading/Loader"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -38,6 +40,9 @@ export default function Servers() {
   const [currentGroup, setCurrentGroup] = useState<string>("All")
 
   const customBackgroundImage = (window.CustomBackgroundImage as string) !== "" ? window.CustomBackgroundImage : undefined
+  const themeSettings = window as unknown as Record<string, unknown>
+  const showVisitorCapsule = themeSettings.ShowVisitorCapsule === true
+  const showAssetCard = themeSettings.ShowAssetCard === true
 
   const restoreScrollPosition = () => {
     const savedPosition = sessionStorage.getItem("scrollPosition")
@@ -130,7 +135,7 @@ export default function Servers() {
     )
   }
 
-  let filteredServers =
+  const groupFilteredServers =
     nezhaWsData?.servers?.filter((server) => {
       if (currentGroup === "All") return true
       const group = groupData?.data?.find(
@@ -138,6 +143,7 @@ export default function Servers() {
       )
       return !!group
     }) || []
+  let filteredServers = groupFilteredServers
 
   const totalServers = filteredServers.length || 0
   const onlineServers = filteredServers.filter((server) => formatNezhaInfo(nezhaWsData.now, server).online)?.length || 0
@@ -235,6 +241,8 @@ export default function Servers() {
         upSpeed={upSpeed}
         downSpeed={downSpeed}
       />
+      {showVisitorCapsule && <VisitorCapsuleBar />}
+      {showAssetCard && <AssetSummaryWidget now={nezhaWsData.now} servers={groupFilteredServers} />}
       <div className="flex mt-6 items-center justify-between gap-2 server-overview-controls">
         <section className="flex items-center gap-2 w-full overflow-hidden">
           <button
