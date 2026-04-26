@@ -1,4 +1,4 @@
-import { PublicNoteData, cn, getDaysBetweenDatesWithAutoRenewal } from "@/lib/utils"
+import { PublicNoteData, cn, formatBillingAmount, getDaysBetweenDatesWithAutoRenewal } from "@/lib/utils"
 import { useTranslation } from "react-i18next"
 
 import RemainPercentBar from "./RemainPercentBar"
@@ -9,6 +9,9 @@ export default function BillingInfo({ parsedData }: { parsedData: PublicNoteData
     return null
   }
 
+  const billingData = parsedData.billingDataMod
+  const billingPrice = `${formatBillingAmount(billingData.amount, billingData.currency)}/${billingData.cycle}`
+
   let isNeverExpire = false
   let daysLeftObject = {
     days: 0,
@@ -16,12 +19,12 @@ export default function BillingInfo({ parsedData }: { parsedData: PublicNoteData
     remainingPercentage: 0,
   }
 
-  if (parsedData?.billingDataMod?.endDate) {
-    if (parsedData.billingDataMod.endDate.startsWith("0000-00-00")) {
+  if (billingData.endDate) {
+    if (billingData.endDate.startsWith("0000-00-00")) {
       isNeverExpire = true
     } else {
       try {
-        daysLeftObject = getDaysBetweenDatesWithAutoRenewal(parsedData.billingDataMod)
+        daysLeftObject = getDaysBetweenDatesWithAutoRenewal(billingData)
       } catch (error) {
         console.error(error)
         return (
@@ -35,13 +38,13 @@ export default function BillingInfo({ parsedData }: { parsedData: PublicNoteData
 
   return daysLeftObject.days >= 0 ? (
     <>
-      {parsedData.billingDataMod.amount && parsedData.billingDataMod.amount !== "0" && parsedData.billingDataMod.amount !== "-1" ? (
+      {billingData.amount && billingData.amount !== "0" && billingData.amount !== "-1" ? (
         <p className={cn("text-[10px] text-muted-foreground ")}>
-          {t("billingInfo.price")}: {parsedData.billingDataMod.amount}/{parsedData.billingDataMod.cycle}
+          {t("billingInfo.price")}: {billingPrice}
         </p>
-      ) : parsedData.billingDataMod.amount === "0" ? (
+      ) : billingData.amount === "0" ? (
         <p className={cn("text-[10px] text-green-600 ")}>{t("billingInfo.free")}</p>
-      ) : parsedData.billingDataMod.amount === "-1" ? (
+      ) : billingData.amount === "-1" ? (
         <p className={cn("text-[10px] text-pink-600 ")}>{t("billingInfo.usage-baseed")}</p>
       ) : null}
       <div className={cn("text-[10px] text-muted-foreground")}>
@@ -51,13 +54,13 @@ export default function BillingInfo({ parsedData }: { parsedData: PublicNoteData
     </>
   ) : (
     <>
-      {parsedData.billingDataMod.amount && parsedData.billingDataMod.amount !== "0" && parsedData.billingDataMod.amount !== "-1" ? (
+      {billingData.amount && billingData.amount !== "0" && billingData.amount !== "-1" ? (
         <p className={cn("text-[10px] text-muted-foreground ")}>
-          {t("billingInfo.price")}: {parsedData.billingDataMod.amount}/{parsedData.billingDataMod.cycle}
+          {t("billingInfo.price")}: {billingPrice}
         </p>
-      ) : parsedData.billingDataMod.amount === "0" ? (
+      ) : billingData.amount === "0" ? (
         <p className={cn("text-[10px] text-green-600 ")}>{t("billingInfo.free")}</p>
-      ) : parsedData.billingDataMod.amount === "-1" ? (
+      ) : billingData.amount === "-1" ? (
         <p className={cn("text-[10px] text-pink-600 ")}>{t("billingInfo.usage-baseed")}</p>
       ) : null}
       <p className={cn("text-[10px] text-muted-foreground text-red-600")}>

@@ -257,6 +257,7 @@ interface BillingData {
   autoRenewal: string
   cycle: string
   amount: string
+  currency?: string
 }
 
 interface PlanData {
@@ -272,6 +273,116 @@ interface PlanData {
 export interface PublicNoteData {
   billingDataMod?: BillingData
   planDataMod?: PlanData
+}
+
+const CURRENCY_LABELS: Record<string, string> = {
+  CNY: "CNY ",
+  JPY: "JPY ",
+  USD: "$",
+  EUR: "\u20ac",
+  GBP: "\u00a3",
+  HKD: "HK$",
+  TWD: "NT$",
+  KRW: "KRW ",
+  SGD: "S$",
+  CAD: "CA$",
+  AUD: "A$",
+  $: "$",
+  "\u20ac": "\u20ac",
+  "\u00a3": "\u00a3",
+  "\u00a5": "\u00a5",
+  "\uffe5": "\uffe5",
+}
+
+function normalizeBillingCurrency(currency?: unknown): string {
+  const raw = typeof currency === "string" ? currency.trim() : ""
+  if (!raw) return ""
+
+  const upper = raw.toUpperCase()
+  const compact = upper.replace(/\s+/g, "")
+
+  if (["CNY", "RMB", "CN\u00a5", "CN\uffe5"].includes(compact) || raw.includes("\u4eba\u6c11\u5e01")) return "CNY"
+  if (["JPY", "JP\u00a5", "JP\uffe5"].includes(compact) || raw.includes("\u65e5\u5143") || raw.includes("\u5186")) return "JPY"
+
+  if (compact === "US$") return "USD"
+  if (compact === "HK$") return "HKD"
+  if (compact === "NT$") return "TWD"
+
+  return compact || raw
+}
+
+function stripCurrencyMarks(amount: string): string {
+  return amount
+    .trim()
+    .replace(
+      /^(?:CNY|RMB|JPY|USD|EUR|GBP|HKD|TWD|KRW|SGD|CAD|AUD|CN\u00a5|CN\uffe5|JP\u00a5|JP\uffe5|US\$|HK\$|NT\$|\$|\u20ac|\u00a3|\u00a5|\uffe5)\s*/i,
+      "",
+    )
+    .replace(
+      /\s*(?:CNY|RMB|JPY|USD|EUR|GBP|HKD|TWD|KRW|SGD|CAD|AUD|CN\u00a5|CN\uffe5|JP\u00a5|JP\uffe5|US\$|HK\$|NT\$|\$|\u20ac|\u00a3|\u00a5|\uffe5)$/i,
+      "",
+    )
+    .trim()
+}
+
+export function formatBillingAmount(amount: string, currency?: string): string {
+  const rawAmount = String(amount || "").trim()
+  if (!rawAmount || rawAmount === "0" || rawAmount === "-1") {
+    return rawAmount
+  }
+
+  const normalizedCurrency = normalizeBillingCurrency(currency)
+  if (!normalizedCurrency) {
+    return rawAmount
+  }
+
+  const label = CURRENCY_LABELS[normalizedCurrency] || `${normalizedCurrency} `
+  const value = stripCurrencyMarks(rawAmount)
+  return value ? `${label}${value}` : rawAmount
+}
+
+function isFollowBackendCurrency(value?: unknown): boolean {
+  const raw = typeof value === "string" ? value.trim() : ""
+  const normalized = raw.toLowerCase()
+  return (
+    raw === "" ||
+    ["backend", "follow-backend", "follow backend", "auto", "default", "\u8ddf\u968f\u540e\u7aef", "\u4f7f\u7528\u540e\u7aef"].includes(normalized)
+  )
+}
+
+function parseBillingCurrencyOverrides(value: unknown): Record<string, unknown> {
+  if (!value) return {}
+  if (typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>
+  if (typeof value !== "string" || !value.trim()) return {}
+
+  try {
+    const parsed = JSON.parse(value)
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function resolveThemeBillingCurrency(server: any, existingCurrency?: string): string {
+  const win = typeof window === "undefined" ? {} : (window as unknown as Record<string, unknown>) || {}
+  const overrides = parseBillingCurrencyOverrides(win.ServerBillingCurrencyOverrides)
+  const overrideKeys = [server?.uuid, server?.name, server?.uuid ? String(uuidToNumber(String(server.uuid))) : ""].filter(Boolean).map(String)
+
+  for (const key of overrideKeys) {
+    if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+      const override = overrides[key]
+      return isFollowBackendCurrency(override)
+        ? normalizeBillingCurrency(server?.currency) || normalizeBillingCurrency(existingCurrency)
+        : normalizeBillingCurrency(override)
+    }
+  }
+
+  const defaultCurrency = win.DefaultBillingCurrency
+  if (!isFollowBackendCurrency(defaultCurrency)) {
+    return normalizeBillingCurrency(defaultCurrency)
+  }
+
+  return normalizeBillingCurrency(server?.currency) || normalizeBillingCurrency(existingCurrency)
 }
 
 export function parsePublicNote(publicNote: string): PublicNoteData | null {
@@ -291,6 +402,7 @@ export function parsePublicNote(publicNote: string): PublicNoteData | null {
           autoRenewal: data.billingDataMod.autoRenewal || "",
           cycle: data.billingDataMod.cycle || "",
           amount: data.billingDataMod.amount || "",
+          currency: data.billingDataMod.currency || "",
         },
       }
     }
@@ -315,6 +427,7 @@ export function parsePublicNote(publicNote: string): PublicNoteData | null {
         autoRenewal: data.billingDataMod.autoRenewal || "",
         cycle: data.billingDataMod.cycle || "",
         amount: data.billingDataMod.amount || "",
+        currency: data.billingDataMod.currency || "",
       },
       planDataMod: {
         bandwidth: data.planDataMod.bandwidth || "",
@@ -361,7 +474,9 @@ export const uuidToNumber = (uuid: string): number => {
 let km_servers_cache: any[] = []
 
 const countryFlagToCode = (flag: string): string => {
-  return [...flag].map((c) => String.fromCharCode(c.codePointAt(0)! - 127397 + 32)).join("")
+  const value = String(flag || "").trim()
+  if (/^[a-z]{2}$/i.test(value)) return value.toLowerCase()
+  return [...value].map((c) => String.fromCharCode(c.codePointAt(0)! - 127397 + 32)).join("")
 }
 
 // 根据 common:getNodes 的字段构造/合并公开备注（public_note）
@@ -428,14 +543,15 @@ function sanitizeTags(tags: string): string {
 function buildPublicNoteFromNode(server: any, existingPublicNote?: string): string {
   try {
     // 如果已有结构化的 public_note，先解析出来以便合并
-    let existing = parsePublicNote(existingPublicNote || "") || undefined
+    const existing = parsePublicNote(existingPublicNote || "") || undefined
     const bc: number = Number(server?.billing_cycle || 0)
     const autoRenewal: string = server?.auto_renewal === true || server?.auto_renewal === 1 || server?.auto_renewal === "1" ? "1" : "0"
     const cycle: string = deriveCycleLabel(bc) || String(bc || "")
+    const currency = resolveThemeBillingCurrency(server, existing?.billingDataMod?.currency)
     const amount: string =
       server?.price != null && server?.price !== 0
-        ? server?.currency
-          ? `${server.price == -1 ? "" :server.currency}${server.price == -1 ? "0" : server.price}`
+        ? server.price === -1
+          ? "-1"
           : String(server.price)
         : ""
 
@@ -465,13 +581,16 @@ function buildPublicNoteFromNode(server: any, existingPublicNote?: string): stri
           : "")
 
     const merged = {
-      billingDataMod: endDate ? {
-        startDate: existing?.billingDataMod?.startDate || startDate,
-        endDate: existing?.billingDataMod?.endDate || endDate,
-        autoRenewal: existing?.billingDataMod?.autoRenewal || autoRenewal,
-        cycle: existing?.billingDataMod?.cycle || cycle === "-1" ? "" : cycle,
-        amount: existing?.billingDataMod?.amount || amount,
-      }:null,
+      billingDataMod: endDate
+        ? {
+            startDate: existing?.billingDataMod?.startDate || startDate,
+            endDate: existing?.billingDataMod?.endDate || endDate,
+            autoRenewal: existing?.billingDataMod?.autoRenewal || autoRenewal,
+            cycle: existing?.billingDataMod?.cycle || (cycle === "-1" ? "" : cycle),
+            amount: existing?.billingDataMod?.amount || amount,
+            currency: currency || existing?.billingDataMod?.currency || "",
+          }
+        : null,
       planDataMod: {
         bandwidth: existing?.planDataMod?.bandwidth || "",
         // 当 traffic_limit==0 时，不从节点写入流量信息
@@ -564,6 +683,7 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
   const servers: any[] = km_servers_cache.map((server: any) => {
     const uuid = server.uuid
     const status = statusMap.get(uuid)
+    const countryCode = server?.region ? countryFlagToCode(String(server.region)) : ""
     // 已处理的 uuid 从映射中移除，避免后续增补阶段重复添加
     if (statusMap.has(uuid)) {
       statusMap.delete(uuid)
@@ -629,7 +749,7 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
       name: server.name,
       public_note: buildPublicNoteFromNode(server, server.public_remark || ""),
       last_active: status ? status.time : "0000-00-00T00:00:00Z",
-      country_code: countryFlagToCode(server.region),
+      country_code: countryCode,
       display_index: -server.weight || 0,
       host,
       state,

@@ -2,7 +2,7 @@
     "name": "nezha-BITJEBE",
     "short": "nezha-BITJEBE",
     "description": "nezha-BITJEBE Theme for Komari Monitor",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "author": "BITJEBE",
     "url": "https://github.com/BITJEBE/nezha-BITJEBE",
     "preview": "preview.png",
@@ -140,6 +140,25 @@
                 "type": "switch",
                 "default": false,
                 "help": "开启后隐藏服务器卡片上显示的流量标签。"
+            },
+            {
+                "name": "账单货币设置",
+                "type": "title"
+            },
+            {
+                "key": "DefaultBillingCurrency",
+                "name": "默认账单货币",
+                "type": "select",
+                "options": "跟随后端,CNY,JPY,USD,EUR,HKD,TWD,KRW,SGD,CAD,AUD",
+                "default": "跟随后端",
+                "help": "没有单独覆盖时使用的货币。选择跟随后端时使用 Komari 节点的 currency 字段。"
+            },
+            {
+                "key": "ServerBillingCurrencyOverrides",
+                "name": "服务器货币覆盖",
+                "type": "input",
+                "default": "",
+                "help": "JSON对象，按服务器UUID、卡片ID或名称指定货币，例如 {\"Tokyo\":\"JPY\",\"spartanhost\":\"USD\",\"1f2e...\":\"CNY\"}。值可填 CNY、JPY、USD 等；填 跟随后端 可让该服务器忽略默认货币。"
             },
             {
                 "name": "流量进度条设置",
