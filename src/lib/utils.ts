@@ -304,8 +304,8 @@ export function normalizeBillingCurrency(currency?: unknown): string {
   if (["CNY", "RMB", "CN\u00a5", "CN\uffe5"].includes(compact) || raw.includes("\u4eba\u6c11\u5e01")) return "CNY"
   if (["JPY", "JP\u00a5", "JP\uffe5"].includes(compact) || raw.includes("\u65e5\u5143") || raw.includes("\u5186")) return "JPY"
 
-  // Komari's currency field is user-entered text. In Chinese deployments, full-width ￥ is commonly used for CNY.
-  if (compact === "\uffe5") return "CNY"
+  // Komari's currency field is user-entered text. In Chinese deployments, bare ¥/￥ is commonly used for CNY.
+  if (compact === "\u00a5" || compact === "\uffe5") return "CNY"
 
   if (compact === "$") return "USD"
   if (compact === "\u20ac") return "EUR"

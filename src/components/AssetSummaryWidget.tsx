@@ -75,11 +75,7 @@ function getInitialCurrency(): string {
 }
 
 function normalizeAssetCurrency(currency?: string): string {
-  const normalized = normalizeBillingCurrency(currency)
-  if (normalized === "¥" || normalized === "￥") {
-    return ""
-  }
-  return normalized
+  return normalizeBillingCurrency(currency)
 }
 
 function formatMoney(value: number | null, currency: string): string {
