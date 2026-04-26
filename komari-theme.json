@@ -173,7 +173,7 @@
                 "type": "select",
                 "options": "跟随后端,CNY,JPY,USD,EUR,HKD,TWD,KRW,SGD,CAD,AUD",
                 "default": "跟随后端",
-                "help": "没有单独覆盖时使用的货币。选择跟随后端时使用 Komari 节点的 currency 字段。"
+                "help": "没有单独覆盖时使用的货币。选择跟随后端时使用 Komari 节点的 currency 字段；后端填全角 ￥ 时按 CNY 识别。"
             },
             {
                 "key": "ServerBillingCurrencyOverrides",
