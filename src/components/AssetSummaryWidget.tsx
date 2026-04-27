@@ -2,6 +2,7 @@ import { CircleDollarSign, Heart, HelpCircle, RefreshCw, X } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 import { formatBytes } from "@/lib/format"
+import { ASSET_COLORS, resolveThemeColor } from "@/lib/theme-colors"
 import {
   calcTrafficUsed,
   cn,
@@ -305,11 +306,11 @@ function useExchangeRates(refreshKey: number) {
   return { rates, status }
 }
 
-function FinanceRow({ label, value }: { label: string; value: string }) {
+function FinanceRow({ label, value, accentClass }: { label: string; value: string; accentClass: string }) {
   return (
     <div className="flex items-center justify-between gap-3 text-[13px]">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-bold text-blue-700 dark:text-blue-300">{value}</span>
+      <span className={cn("font-bold", accentClass)}>{value}</span>
     </div>
   )
 }
@@ -324,6 +325,11 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
   const [tradeAmount, setTradeAmount] = useState("")
   const [tradeDate, setTradeDate] = useState(new Date().toISOString().slice(0, 10))
   const { rates, status } = useExchangeRates(refreshKey)
+
+  const palette = useMemo(() => {
+    const colorKey = resolveThemeColor((window as unknown as Record<string, unknown>).AssetCardColor)
+    return ASSET_COLORS[colorKey]
+  }, [])
 
   const items = useMemo(() => servers.map((server) => buildAssetItem(now, server, rates)), [now, rates, servers])
   const visibleItems = useMemo(() => {
@@ -387,7 +393,8 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
         type="button"
         aria-label="打开资产统计"
         className={cn(
-          "fixed right-5 top-[70px] z-[1041] flex size-11 items-center justify-center rounded-full border border-border bg-card/85 text-blue-700 shadow-lg backdrop-blur-xl transition dark:text-blue-300 max-[576px]:right-4",
+          "fixed right-5 top-[70px] z-[1041] flex size-11 items-center justify-center rounded-full border border-border bg-card/85 shadow-lg backdrop-blur-xl transition max-[576px]:right-4",
+          palette.triggerText,
           open ? "pointer-events-none scale-0 opacity-0" : "scale-100 opacity-100 hover:scale-105",
         )}
         onClick={() => setOpen(true)}
@@ -402,21 +409,21 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
         )}
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h3 className="flex items-center gap-2 text-sm font-bold text-blue-700 dark:text-blue-300">
+          <h3 className={cn("flex items-center gap-2 text-sm font-bold", palette.panelTitle)}>
             <CircleDollarSign className="size-4" />
             资产统计
           </h3>
-          <button type="button" aria-label="关闭资产统计" className="rounded-full p-1 text-muted-foreground transition hover:text-blue-600" onClick={() => setOpen(false)}>
+          <button type="button" aria-label="关闭资产统计" className={cn("rounded-full p-1 text-muted-foreground transition", palette.hoverPrimary)} onClick={() => setOpen(false)}>
             <X className="size-4" />
           </button>
         </div>
 
         <div className="flex flex-col gap-2 px-4 py-3">
-          <FinanceRow label="服务器数量" value={`${servers.length}`} />
-          <FinanceRow label="总价值" value={formatMoney(totals.total * targetRate, targetCurrency)} />
-          <FinanceRow label="月均支出" value={formatMoney(totals.monthly * targetRate, targetCurrency)} />
-          <FinanceRow label="年均支出" value={formatMoney(totals.monthly * 12 * targetRate, targetCurrency)} />
-          <FinanceRow label="剩余总价值" value={formatMoney(totals.remaining * targetRate, targetCurrency)} />
+          <FinanceRow label="服务器数量" value={`${servers.length}`} accentClass={palette.primaryText} />
+          <FinanceRow label="总价值" value={formatMoney(totals.total * targetRate, targetCurrency)} accentClass={palette.primaryText} />
+          <FinanceRow label="月均支出" value={formatMoney(totals.monthly * targetRate, targetCurrency)} accentClass={palette.primaryText} />
+          <FinanceRow label="年均支出" value={formatMoney(totals.monthly * 12 * targetRate, targetCurrency)} accentClass={palette.primaryText} />
+          <FinanceRow label="剩余总价值" value={formatMoney(totals.remaining * targetRate, targetCurrency)} accentClass={palette.primaryText} />
           {totals.unresolved > 0 && (
             <div className="flex items-start gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-300">
               <HelpCircle className="mt-0.5 size-3 shrink-0" />
@@ -452,7 +459,7 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
                     <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap" title={item.name}>
                       {item.name}
                     </span>
-                    <span className="flex shrink-0 items-center gap-1 font-semibold text-blue-700 dark:text-blue-300" title={`${item.sourcePriceText} · ${title}`}>
+                    <span className={cn("flex shrink-0 items-center gap-1 font-semibold", palette.primaryText)} title={`${item.sourcePriceText} · ${title}`}>
                       {formatMoney(convertedValue, targetCurrency)}
                       {(item.isFree || item.isUsageBased || item.isFreeTagged || item.isLongTerm || item.isExpired) && <HelpCircle className="size-3 text-muted-foreground" />}
                     </span>
@@ -470,7 +477,7 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
             {exchangeRows.map((row) => (
               <div key={row.currency} className="flex justify-between gap-3">
                 <span>1 {row.currency}</span>
-                <span className="font-medium text-blue-700 dark:text-blue-300">{formatMoney(row.value, targetCurrency)}</span>
+                <span className={cn("font-medium", palette.primaryText)}>{formatMoney(row.value, targetCurrency)}</span>
               </div>
             ))}
           </div>
@@ -503,7 +510,7 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
               <button
                 type="button"
                 aria-label="切换免费资产"
-                className={cn("rounded p-1 text-muted-foreground transition hover:text-blue-600", excludeFree && "text-blue-600")}
+                className={cn("rounded p-1 text-muted-foreground transition", palette.hoverPrimary, excludeFree && palette.primaryText)}
                 onClick={toggleFree}
                 title={excludeFree ? "当前：已排除免费/白嫖" : "当前：包含免费/白嫖"}
               >
@@ -512,7 +519,7 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
               <button
                 type="button"
                 aria-label="刷新汇率"
-                className="rounded p-1 text-muted-foreground transition hover:text-blue-600"
+                className={cn("rounded p-1 text-muted-foreground transition", palette.hoverPrimary)}
                 onClick={() => setRefreshKey((value) => value + 1)}
                 title="刷新汇率"
               >
@@ -530,17 +537,17 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-blue-700 dark:text-blue-300">
+              <h3 className={cn("flex items-center gap-2 text-sm font-bold", palette.panelTitle)}>
                 <CircleDollarSign className="size-4" />
                 服务器交易
               </h3>
-              <button type="button" aria-label="关闭交易计算" className="rounded-full p-1 text-muted-foreground transition hover:text-blue-600" onClick={() => setTradeItem(null)}>
+              <button type="button" aria-label="关闭交易计算" className={cn("rounded-full p-1 text-muted-foreground transition", palette.hoverPrimary)} onClick={() => setTradeItem(null)}>
                 <X className="size-4" />
               </button>
             </div>
 
             <div className="max-h-[calc(90vh-52px)] overflow-y-auto p-4">
-              <div className="mb-3 text-sm font-bold text-blue-700 dark:text-blue-300">服务器信息</div>
+              <div className={cn("mb-3 text-sm font-bold", palette.panelTitle)}>服务器信息</div>
               <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-border bg-muted/30 text-[13px]">
                 <div className="border-b border-r border-border p-2">
                   <span className="text-muted-foreground">名称</span>
@@ -579,12 +586,12 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
               </div>
 
               <div className="my-4 h-px bg-border" />
-              <div className="mb-3 text-sm font-bold text-blue-700 dark:text-blue-300">交易计算</div>
+              <div className={cn("mb-3 text-sm font-bold", palette.panelTitle)}>交易计算</div>
               <div className="grid gap-3">
                 <label className="grid gap-1 text-[13px] font-semibold text-muted-foreground">
                   交易日期
                   <input
-                    className="h-9 rounded-md border border-border bg-background px-3 text-foreground outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-300/50"
+                    className={cn("h-9 rounded-md border border-border bg-background px-3 text-foreground outline-none focus:ring-2", palette.focusInput)}
                     type="date"
                     value={tradeDate}
                     onChange={(event) => setTradeDate(event.target.value)}
@@ -593,7 +600,7 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
                 <label className="grid gap-1 text-[13px] font-semibold text-muted-foreground">
                   交易金额
                   <input
-                    className="h-11 rounded-md border-2 border-border bg-background px-3 text-base font-bold text-blue-700 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-300/50 dark:text-blue-300"
+                    className={cn("h-11 rounded-md border-2 border-border bg-background px-3 text-base font-bold outline-none transition focus:ring-2", palette.primaryText, palette.focusInput)}
                     type="number"
                     min="0"
                     step="0.01"
@@ -605,7 +612,7 @@ export default function AssetSummaryWidget({ now, servers }: AssetSummaryWidgetP
                 <div className="rounded-lg border border-border bg-muted/30 px-3 py-1 text-[13px]">
                   <div className="flex justify-between border-b border-border py-2">
                     <span className="text-muted-foreground">剩余价值</span>
-                    <span className="font-semibold text-blue-700 dark:text-blue-300">{formatMoney(tradeRemainingValue, targetCurrency)}</span>
+                    <span className={cn("font-semibold", palette.primaryText)}>{formatMoney(tradeRemainingValue, targetCurrency)}</span>
                   </div>
                   <div className="flex justify-between border-b border-border py-2">
                     <span className="text-muted-foreground">溢价金额</span>

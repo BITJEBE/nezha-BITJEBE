@@ -1,6 +1,15 @@
 module.exports = {
   darkMode: ["class"],
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  // 防御性 safelist：访客胶囊和资产卡片的色板从 window.* 全局变量动态选取，
+  // 这些 class 字面量已经在 src/lib/theme-colors.ts 中完整列出，理论上 JIT 能扫到；
+  // 这里再加一层兜底，避免未来重构时不小心被摇树。
+  safelist: [
+    {
+      pattern:
+        /^(border|bg|text|hover:text|focus:border|focus:ring|dark:border|dark:bg|dark:text)-(blue|green|purple|pink|orange|red|cyan|amber)-(50|100|200|300|400|500|600|700|800|900|950)(\/(10|20|22|25|30|40|50|70|80|85))?$/,
+    },
+  ],
   theme: {
     extend: {
       fontFamily: {

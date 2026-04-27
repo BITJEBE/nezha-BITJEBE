@@ -16,6 +16,8 @@ export interface NezhaServer {
   traffic_limit?: number
   traffic_limit_type?: string
   expired_at?: string
+  // Komari 后端权威 online 字段(基于 WS 连接 + presence TTL),优先于 last_active 时间差
+  online?: boolean
 }
 
 export interface NezhaServerHost {

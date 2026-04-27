@@ -1,6 +1,6 @@
 import { SharedClient } from "@/hooks/use-rpc2"
 import { getKomariNodes, komariToNezhaWebsocketResponse } from "@/lib/utils"
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 import { WebSocketContext, WebSocketContextType } from "./websocket-context"
 
@@ -14,23 +14,24 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ url, child
   const [messageHistory, setMessageHistory] = useState<{ data: string }[]>([]) // 新增历史消息状态
   const [connected, setConnected] = useState(false)
   const [needReconnect, setNeedReconnect] = useState(false)
-  // const ws = useRef<WebSocket | null>(null)
-  // const reconnectTimeout = useRef<NodeJS.Timeout>(null)
-  // const maxReconnectAttempts = 30
-  // const reconnectAttempts = useRef(0)
-  // const isConnecting = useRef(false)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const getData = () => {
     const rpc2 = SharedClient()
-    return rpc2.call("common:getNodesLatestStatus").then((res) => {
-      //console.log(res)
-      const nzwsres = komariToNezhaWebsocketResponse(res)
-      setLastMessage({ data: JSON.stringify(nzwsres) })
-      setMessageHistory((prev) => {
-        const updated = [{ data: JSON.stringify(nzwsres) }, ...prev]
-        return updated.slice(0, 30)
+    return rpc2
+      .call("common:getNodesLatestStatus")
+      .then((res) => {
+        const nzwsres = komariToNezhaWebsocketResponse(res)
+        setLastMessage({ data: JSON.stringify(nzwsres) })
+        setMessageHistory((prev) => {
+          const updated = [{ data: JSON.stringify(nzwsres) }, ...prev]
+          return updated.slice(0, 30)
+        })
       })
-    })
+      .catch((err) => {
+        // 单次失败不影响后续轮询;不向上抛出避免变成未处理的 Promise rejection
+        console.warn("getNodesLatestStatus 失败,等待下一轮:", err?.message || err)
+      })
   }
 
   useEffect(() => {
@@ -39,9 +40,16 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ url, child
       setConnected(true)
     })
 
-    setInterval(() => {
+    intervalRef.current = setInterval(() => {
       getData()
     }, 2000)
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
   }, [])
 
   const cleanup = () => {

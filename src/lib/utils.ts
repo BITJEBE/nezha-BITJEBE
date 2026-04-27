@@ -10,7 +10,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatNezhaInfo(now: number, serverInfo: NezhaServer) {
-  const lastActiveTime = serverInfo.last_active.startsWith("000") ? 0 : parseISOTimestamp(serverInfo.last_active)
+  const lastActiveRaw = serverInfo.last_active || ""
+  const lastActiveTime = lastActiveRaw.startsWith("000") ? 0 : parseISOTimestamp(lastActiveRaw)
+  // 优先使用 Komari 后端权威 online 字段(基于 WS 连接 + presence TTL),
+  // 仅在缺失时回退到 now - last_active <= 30s 的时间差判断。
+  // 这样可以避免访客本地时钟与服务器时钟偏差(>30s)造成的误判离线。
+  const onlineFlag =
+    typeof serverInfo.online === "boolean"
+      ? serverInfo.online
+      : Number.isFinite(lastActiveTime) && lastActiveTime > 0 && now - lastActiveTime <= 30000
   return {
     ...serverInfo,
     cpu: serverInfo.state.cpu || 0,
@@ -19,7 +27,7 @@ export function formatNezhaInfo(now: number, serverInfo: NezhaServer) {
     up: serverInfo.state.net_out_speed / 1024 / 1024 || 0,
     down: serverInfo.state.net_in_speed / 1024 / 1024 || 0,
     last_active_time_string: lastActiveTime ? dayjs(lastActiveTime).format("YYYY-MM-DD HH:mm:ss") : "",
-    online: now - lastActiveTime <= 30000,
+    online: onlineFlag,
     uptime: serverInfo.state.uptime || 0,
     version: serverInfo.host.version || null,
     tcp: serverInfo.state.tcp_conn_count || 0,
@@ -768,7 +776,7 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
       id: uuidToNumber(uuid),
       name: server.name,
       public_note: buildPublicNoteFromNode(server, server.public_remark || ""),
-      last_active: status ? status.time : "0000-00-00T00:00:00Z",
+      last_active: status && status.time ? status.time : "0000-00-00T00:00:00Z",
       country_code: countryCode,
       display_index: -server.weight || 0,
       host,
@@ -776,6 +784,7 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
       traffic_limit: server.traffic_limit || 0,
       traffic_limit_type: server.traffic_limit_type || "sum",
       expired_at: server.expired_at || "",
+      online: status ? status.online === true : false,
     }
   })
 
@@ -819,11 +828,12 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
       id: uuidToNumber(uuid),
       name: status.name || uuid,
       public_note: "",
-      last_active: status.time,
+      last_active: status.time || "0000-00-00T00:00:00Z",
       country_code: status.region ? countryFlagToCode(status.region) : "",
       display_index: 0,
       host,
       state,
+      online: status.online === true,
     })
   }
 

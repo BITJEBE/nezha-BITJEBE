@@ -1,6 +1,7 @@
 import { Globe2 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
+import { CAPSULE_COLORS, resolveThemeColor } from "@/lib/theme-colors"
 import { cn } from "@/lib/utils"
 
 type VisitorInfo = {
@@ -100,14 +101,20 @@ export default function VisitorCapsuleBar() {
 
   const canShowFlag = visitorInfo?.code && /^[A-Z]{2}$/.test(visitorInfo.code) && visitorInfo.code !== "UN"
 
+  const palette = useMemo(() => {
+    const colorKey = resolveThemeColor((window as unknown as Record<string, unknown>).VisitorCapsuleColor)
+    return CAPSULE_COLORS[colorKey]
+  }, [])
+
   return (
     <div
       className={cn(
-        "fixed bottom-[30px] left-1/2 z-[10001] flex max-w-[95vw] -translate-x-1/2 translate-y-[50px] items-center gap-2 whitespace-nowrap rounded-full border border-blue-300/70 bg-blue-50/85 px-5 py-2 text-[13px] font-medium text-blue-950 opacity-0 shadow-[0_10px_30px_rgba(37,99,235,0.22)] backdrop-blur-xl transition-all duration-700 dark:border-blue-400/30 dark:bg-blue-950/80 dark:text-blue-50 max-[768px]:bottom-4 max-[768px]:scale-75 max-[768px]:px-3 max-[768px]:py-1.5 max-[768px]:text-xs",
+        "fixed bottom-[30px] left-1/2 z-[10001] flex max-w-[95vw] -translate-x-1/2 translate-y-[50px] items-center gap-2 whitespace-nowrap rounded-full border px-5 py-2 text-[13px] font-medium opacity-0 backdrop-blur-xl transition-all duration-700 max-[768px]:bottom-4 max-[768px]:scale-75 max-[768px]:px-3 max-[768px]:py-1.5 max-[768px]:text-xs",
+        palette.container,
         active ? "translate-y-0 opacity-100" : "pointer-events-none invisible",
       )}
     >
-      <span className="flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full border border-blue-200/70 bg-white/80 text-blue-600 dark:border-blue-300/25 dark:bg-blue-900/70 dark:text-blue-200">
+      <span className={cn("flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full border", palette.iconWrap)}>
         {canShowFlag ? (
           <img
             className="size-full object-cover"
@@ -122,20 +129,20 @@ export default function VisitorCapsuleBar() {
       {visitorInfo ? (
         <span className="flex min-w-0 items-center gap-2">
           <span>
-            <span className="font-semibold text-blue-700 dark:text-blue-200">IP:</span> {visitorInfo.ip}
+            <span className={cn("font-semibold", palette.ipLabel)}>IP:</span> {visitorInfo.ip}
           </span>
-          <span className="h-3 w-px bg-blue-200 dark:bg-blue-500/40" />
+          <span className={cn("h-3 w-px", palette.divider)} />
           <span className="max-[768px]:hidden">{visitorInfo.country}</span>
           <span className="hidden max-[768px]:inline">{visitorInfo.code}</span>
-          <span className="h-3 w-px bg-blue-200 dark:bg-blue-500/40" />
+          <span className={cn("h-3 w-px", palette.divider)} />
           <span className="inline-block max-w-[140px] overflow-hidden text-ellipsis align-bottom" title={visitorInfo.org}>
             {visitorInfo.org}
           </span>
         </span>
       ) : hasError ? (
         <span className="flex items-center gap-2">
-          <span className="font-semibold text-blue-700 dark:text-blue-200">Hello!</span>
-          <span className="h-3 w-px bg-blue-200 dark:bg-blue-500/40" />
+          <span className={cn("font-semibold", palette.errorAccent)}>Hello!</span>
+          <span className={cn("h-3 w-px", palette.divider)} />
           <span>欢迎回来</span>
         </span>
       ) : (

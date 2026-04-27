@@ -2,7 +2,7 @@
     "name": "nezha-BITJEBE",
     "short": "nezha-BITJEBE",
     "description": "nezha-BITJEBE Theme for Komari Monitor",
-    "version": "1.0.6",
+    "version": "1.1.0",
     "author": "BITJEBE",
     "url": "https://github.com/BITJEBE/nezha-BITJEBE",
     "preview": "preview.png",
@@ -110,11 +110,27 @@
                 "help": "开启后在页面底部短暂显示访客 IP、地区和运营商信息。"
             },
             {
+                "key": "VisitorCapsuleColor",
+                "name": "访客胶囊颜色",
+                "type": "select",
+                "options": "blue,green,purple,pink,orange,red,cyan,amber",
+                "default": "blue",
+                "help": "访客胶囊的主色调，亮/暗模式自动配套。"
+            },
+            {
                 "key": "ShowAssetCard",
                 "name": "显示资产卡片",
                 "type": "switch",
                 "default": false,
                 "help": "开启后显示右上角资产统计浮窗，账单金额会使用默认货币和服务器货币覆盖配置。"
+            },
+            {
+                "key": "AssetCardColor",
+                "name": "资产卡片颜色",
+                "type": "select",
+                "options": "blue,green,purple,pink,orange,red,cyan,amber",
+                "default": "blue",
+                "help": "资产卡片浮窗的主色调，亮/暗模式自动配套。"
             },
             {
                 "key": "AssetCardDefaultCurrency",
