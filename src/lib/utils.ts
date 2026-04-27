@@ -812,6 +812,8 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
       traffic_limit_type: server.traffic_limit_type || "sum",
       expired_at: server.expired_at || "",
       online: status ? status.online === true : false,
+      tags: typeof server.tags === "string" ? server.tags : "",
+      currency: typeof server.currency === "string" ? server.currency : "",
     }
   })
 

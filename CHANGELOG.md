@@ -1,5 +1,15 @@
 # 更新日志
 
+## v1.1.2
+
+### 修复
+
+- 修复资产卡片在「默认账单货币」被显式设为 CNY/JPY 等具体货币（非"跟随后端"）时，会忽略 v1.1.1 引入的 tags 内嵌 `<货币>` 元标签，把日元服务器误识别为默认货币的问题。原因是 `komariToNezhaWebsocketResponse` 转换出的 `NezhaServer` 对象未透传 Komari 后端的 `tags` 和 `currency` 字段，导致资产卡片调用 `resolveThemeBillingCurrency` 时 tag 这一层失效。本版透传这两个字段，资产卡片现在能与服务器卡片金额前缀一致地识别 `<JPY>` 等元标签。
+
+### 内部
+
+- `NezhaServer` 类型新增可选字段 `tags?: string`、`currency?: string`，作为后端原始数据的兜底通道。
+
 ## v1.1.1
 
 ### 修复
