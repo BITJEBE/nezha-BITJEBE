@@ -219,12 +219,12 @@ function getSourcePriceText(billing?: BillingData, currency?: string): string {
   if (!billing?.amount) {
     return "未设置"
   }
+  // Komari 语义：price === 0 表示未配置/不显示价格；price === -1 表示免费。
   if (billing.amount === "0") {
-    return "免费"
+    return "未设置"
   }
-  // Komari 后端 price < 0（含 -1）的官方语义是"免费/一次性"，对齐其自带卡片显示。
   if (billing.amount === "-1") {
-    return "免费/一次性"
+    return "免费"
   }
 
   const amount = formatBillingAmount(billing.amount, currency || billing.currency)
@@ -269,8 +269,9 @@ function buildAssetItem(now: number, server: NezhaServer, rates: ExchangeRates):
     remainingCny,
     remainingDays: remaining?.days ?? null,
     isExpired: remaining?.isExpired || false,
-    // Komari 中 price=0 与 price<0 都是"不计入资产"的语义（前者免费、后者免费/一次性），统一归为 isFree。
-    isFree: billing?.amount === "0" || billing?.amount === "-1" || sourceAmount === 0,
+    // Komari 语义：price === -1 才是真正的"免费"，price === 0 表示未配置价格（不计入资产汇总也不算"免费白嫖"）。
+    // 两者都不应贡献资产价值，故汇总维度合并为 isFree；展示文案在 getSourcePriceText 区分。
+    isFree: billing?.amount === "-1" || billing?.amount === "0" || sourceAmount === 0,
     isUsageBased: false,
     isLongTerm: remaining?.isLongTerm || false,
     isFreeTagged: extra.includes("白嫖"),

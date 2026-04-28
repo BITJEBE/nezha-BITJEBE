@@ -667,12 +667,21 @@ function buildPublicNoteFromNode(server: any, existingPublicNote?: string): stri
 }
 
 export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketResponse => {
-  if (km_servers_cache.length === 0) {
-    getKomariNodes()
-      .then((res) => {
-        km_servers_cache = Object.values(res || {})
-      })
-  }
+  // 每次 WS tick 都尝试拿一次节点列表;getKomariNodes 自带 2 分钟 TTL,
+  // 命中缓存时几乎零开销,TTL 过期后会触发刷新,从而让后端删除的服务器
+  // 在 ≤2 分钟内从前端消失(否则 km_servers_cache 一旦填充就永不更新,
+  // 已删除的机器会以"幽灵卡片"形式残留:名称来自缓存、所有指标为 0、
+  // last_active=0000-00-00,直到刷新页面)
+  getKomariNodes()
+    .then((res) => {
+      const next = Object.values(res || {})
+      if (next.length > 0) {
+        km_servers_cache = next
+      }
+    })
+    .catch(() => {
+      // 拉取失败保持现有缓存,下一轮自动重试
+    })
 
   // 如果还没有缓存，先按 data 渲染，避免首次为空
   if (!km_servers_cache || km_servers_cache.length === 0) {
@@ -735,7 +744,16 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
 
   // 按缓存列表展示；如果 data 中没有该 uuid，则视为离线
   const statusMap = new Map<string, any>(Object.entries(data || {}))
-  const servers: any[] = km_servers_cache.map((server: any) => {
+  // Komari 的 getNodesLatestStatus 对**离线但仍注册**的服务器会以 online:false 返回,
+  // 只有**被后端删除**的服务器才会从该接口完全消失。因此当 statusMap 非空时,
+  // 把缓存中存在但 statusMap 里没有的 UUID 直接过滤掉,删服务器可以在下一次 WS tick(≤2 秒)
+  // 立即从前端消失,而不必等 km_servers_cache 的 2 分钟 TTL 刷新;
+  // statusMap 为空时(初次加载或瞬时错误)保留全部缓存,避免误删。
+  const hasStatusData = statusMap.size > 0
+  const liveCache = hasStatusData
+    ? km_servers_cache.filter((server: any) => statusMap.has(server.uuid))
+    : km_servers_cache
+  const servers: any[] = liveCache.map((server: any) => {
     const uuid = server.uuid
     const status = statusMap.get(uuid)
     const countryCode = server?.region ? countryFlagToCode(String(server.region)) : ""

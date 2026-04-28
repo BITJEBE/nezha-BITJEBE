@@ -42,10 +42,8 @@ export default function BillingInfo({ parsedData }: { parsedData: PublicNoteData
         <p className={cn("text-[10px] text-muted-foreground ")}>
           {t("billingInfo.price")}: {billingPrice}
         </p>
-      ) : billingData.amount === "0" ? (
-        <p className={cn("text-[10px] text-green-600 ")}>{t("billingInfo.free")}</p>
       ) : billingData.amount === "-1" ? (
-        <p className={cn("text-[10px] text-pink-600 ")}>{t("billingInfo.usage-baseed")}</p>
+        <p className={cn("text-[10px] text-green-600 ")}>{t("billingInfo.free")}</p>
       ) : null}
       <div className={cn("text-[10px] text-muted-foreground")}>
         {t("billingInfo.remaining")}: {isNeverExpire ? t("billingInfo.indefinite") : daysLeftObject.days + " " + t("billingInfo.days")}
@@ -58,10 +56,8 @@ export default function BillingInfo({ parsedData }: { parsedData: PublicNoteData
         <p className={cn("text-[10px] text-muted-foreground ")}>
           {t("billingInfo.price")}: {billingPrice}
         </p>
-      ) : billingData.amount === "0" ? (
-        <p className={cn("text-[10px] text-green-600 ")}>{t("billingInfo.free")}</p>
       ) : billingData.amount === "-1" ? (
-        <p className={cn("text-[10px] text-pink-600 ")}>{t("billingInfo.usage-baseed")}</p>
+        <p className={cn("text-[10px] text-green-600 ")}>{t("billingInfo.free")}</p>
       ) : null}
       <p className={cn("text-[10px] text-muted-foreground text-red-600")}>
         {t("billingInfo.expired")}: {daysLeftObject.days * -1} {t("billingInfo.days")}
