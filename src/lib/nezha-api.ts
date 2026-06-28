@@ -6,6 +6,36 @@ import { getKomariNodes, uuidToNumber } from "./utils"
 
 //let lastestRefreshTokenAt = 0
 
+function parseOrderedList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).map((item) => item.trim()).filter(Boolean)
+  if (typeof value !== "string" || !value.trim()) return []
+
+  try {
+    const parsed = JSON.parse(value)
+    if (Array.isArray(parsed)) return parsed.map(String).map((item) => item.trim()).filter(Boolean)
+  } catch {
+    // fall back to delimiter parsing
+  }
+
+  return value
+    .split(/[\n,，;；|]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function sortGroupsByThemeOrder(groups: string[]): string[] {
+  const win = typeof window === "undefined" ? {} : (window as unknown as Record<string, unknown>)
+  const order = parseOrderedList(win.GroupOrder)
+  const orderMap = new Map(order.map((name, index) => [name, index]))
+
+  return [...groups].sort((a, b) => {
+    const ai = orderMap.has(a) ? orderMap.get(a)! : Number.MAX_SAFE_INTEGER
+    const bi = orderMap.has(b) ? orderMap.get(b)! : Number.MAX_SAFE_INTEGER
+    if (ai !== bi) return ai - bi
+    return a.localeCompare(b)
+  })
+}
+
 export const fetchServerGroup = async (): Promise<ServerGroupResponse> => {
   const kmNodes: Record<string, any> = await getKomariNodes()
 
@@ -14,11 +44,12 @@ export const fetchServerGroup = async (): Promise<ServerGroupResponse> => {
   }
   // extract groups
   let groups: string[] = []
-  Object.entries(kmNodes).forEach(([_, value]) => {
+  Object.entries(kmNodes).forEach(([, value]) => {
     if (value.group && !groups.includes(value.group)) {
       groups.push(value.group)
     }
   })
+  groups = sortGroupsByThemeOrder(groups)
 
   const data: ServerGroupResponse = {
     success: true,
@@ -31,8 +62,8 @@ export const fetchServerGroup = async (): Promise<ServerGroupResponse> => {
           name: group,
         },
         servers: Object.entries(kmNodes)
-          .filter(([_, value]) => value.group === group)
-          .map(([key, _]) => uuidToNumber(key)),
+          .filter(([, value]) => value.group === group)
+          .map(([key]) => uuidToNumber(key)),
       })),
     ],
   }
@@ -305,7 +336,7 @@ export const fetchService = async (): Promise<ServiceResponse> => {
   const kmNodes: Record<string, any> = await getKomariNodes()
   const uuids = Object.keys(kmNodes || {})
 
-  let allTasks: any[] = []
+  const allTasks: any[] = []
   let allRecords: any[] = []
   const seenTaskIds = new Set<number>()
 
@@ -401,10 +432,27 @@ export const updateThemeSetting = async (key: string, value: unknown): Promise<v
 }
 
 export const fetchSetting = async (): Promise<SettingResponse> => {
-  const km_public = await SharedClient().call("common:getPublicInfo")
-  if (km_public.error) {
-    throw new Error(km_public.error)
+  const publicRes = await fetch("/api/public", { credentials: "include", cache: "no-store" })
+  if (!publicRes.ok) {
+    throw new Error(`Failed to fetch public settings: ${publicRes.status}`)
   }
+  const publicJson = await publicRes.json()
+  const km_public = publicJson?.data || publicJson
+  if (publicJson?.status === "error" || km_public?.error) {
+    throw new Error(publicJson?.message || km_public?.error || "Failed to fetch public settings")
+  }
+
+  let privateSite = km_public.private_site === true
+  if (privateSite) {
+    try {
+      const meRes = await fetch("/api/me", { credentials: "include", cache: "no-store" })
+      const me = await meRes.json()
+      if (me?.logged_in === true) privateSite = false
+    } catch {
+      // keep privateSite=true
+    }
+  }
+
   // Apply managed theme configuration to window.* variables
   const themeSettings = km_public.theme_settings
   if (themeSettings && typeof themeSettings === "object") {
@@ -413,7 +461,15 @@ export const fetchSetting = async (): Promise<SettingResponse> => {
       ;(window as unknown as Record<string, unknown>)[key] = value
     }
   }
-  const km_version = await SharedClient().call("common:getVersion")
+  let version = "unknown"
+  if (!privateSite) {
+    try {
+      const km_version = await SharedClient().call("common:getVersion")
+      version = km_version.version || "unknown"
+    } catch {
+      version = "unknown"
+    }
+  }
   const km_data: SettingResponse = {
     success: true,
     data: {
@@ -426,7 +482,8 @@ export const fetchSetting = async (): Promise<SettingResponse> => {
         admin_template: "",
         custom_code: "", // km_public.custom_head 当作为主题时，Komari会自动在Head中插入该代码，留空即可
       },
-      version: km_version.version || "unknown",
+      private_site: privateSite,
+      version,
     },
   }
   return km_data

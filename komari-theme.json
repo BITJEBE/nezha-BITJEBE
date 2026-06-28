@@ -2,7 +2,7 @@
     "name": "nezha-BITJEBE",
     "short": "nezha-BITJEBE",
     "description": "nezha-BITJEBE Theme for Komari Monitor",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "author": "BITJEBE",
     "url": "https://github.com/BITJEBE/nezha-BITJEBE",
     "preview": "preview.png",
@@ -80,6 +80,13 @@
                 "type": "switch",
                 "default": false,
                 "help": "开启后服务器卡片使用紧凑的行内布局模式。"
+            },
+            {
+                "key": "GroupOrder",
+                "name": "分组显示顺序",
+                "type": "input",
+                "default": "",
+                "help": "自定义首页分组顺序，All 固定最前。支持逗号/换行分隔或 JSON 数组，例如 香港,日本,美国。未列出的分组会按名称排在后面。"
             },
             {
                 "key": "DisableAnimatedMan",
@@ -230,6 +237,13 @@
                 "type": "switch",
                 "default": true,
                 "help": "在流量进度条右上角显示计费模式（双向/单向等）。"
+            },
+            {
+                "key": "TrafficResetDayOverrides",
+                "name": "流量重置日覆盖",
+                "type": "input",
+                "default": "",
+                "help": "JSON对象，按服务器UUID、卡片ID或名称指定每月流量重置日，例如 {\"Tokyo\":1,\"server-uuid\":15}。更推荐直接在 Komari 节点 tags 里加 <TRD:1> 这类元标签；tags 优先级最高，本配置作为兜底。都没有时显示 N/A。"
             }
         ]
     }

@@ -4,21 +4,26 @@ import { useEffect, useRef, useState } from "react"
 interface TrafficBarProps {
   used: number
   limit: number
-  expiredAt: string
+  resetDay?: number
   limitType: string
 }
 
-function calcResetDays(expiredAt: string): string {
-  if (!expiredAt || expiredAt.startsWith("0000")) return "N/A"
-  try {
-    const day = new Date(expiredAt).getDate()
-    const now = new Date()
-    const reset = new Date(now.getFullYear(), now.getMonth(), day)
-    if (reset <= now) reset.setMonth(reset.getMonth() + 1)
-    return Math.ceil((reset.getTime() - now.getTime()) / 86400000) + "日"
-  } catch {
-    return "N/A"
+function getMonthlyResetDate(now: Date, day: number): Date {
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  return new Date(now.getFullYear(), now.getMonth(), Math.min(day, lastDay))
+}
+
+function calcResetDays(resetDay?: number): string {
+  if (!resetDay || resetDay < 1 || resetDay > 31) return "N/A"
+
+  const now = new Date()
+  let reset = getMonthlyResetDate(now, resetDay)
+  if (reset <= now) {
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    reset = getMonthlyResetDate(nextMonth, resetDay)
   }
+
+  return Math.ceil((reset.getTime() - now.getTime()) / 86400000) + "日"
 }
 
 function getTypeLabel(type: string): string {
@@ -35,7 +40,7 @@ function getColor(percent: number): string {
   return `hsl(${(100 - percent) * 1.4}, 70%, 50%)`
 }
 
-export default function TrafficBar({ used, limit, expiredAt, limitType }: TrafficBarProps) {
+export default function TrafficBar({ used, limit, resetDay, limitType }: TrafficBarProps) {
   const [infoIndex, setInfoIndex] = useState(0)
   const [fading, setFading] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -45,13 +50,11 @@ export default function TrafficBar({ used, limit, expiredAt, limitType }: Traffi
   const showResetDay = win.TrafficBarShowResetDay !== false
   const showBillingMode = win.TrafficBarShowBillingMode !== false
 
-  if (limit <= 0) return null
-
-  const percent = Math.min(100, (used / limit) * 100)
+  const percent = limit > 0 ? Math.min(100, (used / limit) * 100) : 0
   const percentStr = percent.toFixed(2)
   const usedFormatted = formatBytes(used)
   const limitFormatted = formatBytes(limit)
-  const resetDays = calcResetDays(expiredAt)
+  const resetDays = calcResetDays(resetDay)
 
   // 根据设置构建要显示的信息项
   const infoItems: string[] = []
@@ -78,6 +81,8 @@ export default function TrafficBar({ used, limit, expiredAt, limitType }: Traffi
       if (timerRef.current) clearInterval(timerRef.current)
     }
   }, [shouldCycle, infoItems.length])
+
+  if (limit <= 0) return null
 
   return (
     <div className="space-y-1.5 w-full">

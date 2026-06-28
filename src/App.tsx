@@ -7,6 +7,7 @@ import { DashCommand } from "./components/DashCommand"
 import ErrorBoundary from "./components/ErrorBoundary"
 import Footer from "./components/Footer"
 import Header, { RefreshToast } from "./components/Header"
+import PrivateAccessGate from "./components/PrivateAccessGate"
 import { useBackground } from "./hooks/use-background"
 import { useTheme } from "./hooks/use-theme"
 import { InjectContext } from "./lib/inject"
@@ -66,6 +67,10 @@ const MainApp: React.FC = () => {
 
   if (settingData?.data?.config?.language && !localStorage.getItem("language")) {
     i18n.changeLanguage(settingData?.data?.config?.language)
+  }
+
+  if (settingData.data.private_site) {
+    return <PrivateAccessGate siteName={settingData.data.config.site_name} siteDesc={settingData.data.config.site_desc} />
   }
 
   const customMobileBackgroundImage = window.CustomMobileBackgroundImage !== "" ? window.CustomMobileBackgroundImage : undefined

@@ -16,7 +16,7 @@ import { Separator } from "./ui/separator"
 export default function ServerCardInline({ now, serverInfo }: { now: number; serverInfo: NezhaServer }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { name, country_code, online, cpu, up, down, mem, stg, platform, uptime, net_in_transfer, net_out_transfer, public_note, traffic_limit, traffic_limit_type, expired_at } = formatNezhaInfo(
+  const { name, country_code, online, cpu, up, down, mem, stg, platform, uptime, net_in_transfer, net_out_transfer, public_note, traffic_limit, traffic_limit_type, traffic_reset_day } = formatNezhaInfo(
     now,
     serverInfo,
   )
@@ -117,7 +117,7 @@ export default function ServerCardInline({ now, serverInfo }: { now: number; ser
             <TrafficBar
               used={calcTrafficUsed(net_out_transfer, net_in_transfer, traffic_limit_type)}
               limit={traffic_limit}
-              expiredAt={expired_at}
+              resetDay={traffic_reset_day}
               limitType={traffic_limit_type}
             />
           )}

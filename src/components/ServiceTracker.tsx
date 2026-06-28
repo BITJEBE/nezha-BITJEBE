@@ -108,7 +108,7 @@ export function ServiceTracker({ serverList }: { serverList: NezhaServer[] }) {
   }
 
   const allServices = serviceData.data.services ? Object.entries(serviceData.data.services) : []
-  const visibleServices = allServices.filter(([_, data]) => !hiddenServices.includes(data.service_name))
+  const visibleServices = allServices.filter(([, data]) => !hiddenServices.includes(data.service_name))
 
   return (
     <div className="mt-4 w-full mx-auto ">

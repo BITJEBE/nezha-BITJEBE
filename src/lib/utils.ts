@@ -52,9 +52,10 @@ export function formatNezhaInfo(now: number, serverInfo: NezhaServer) {
     load_1: serverInfo.state.load_1?.toFixed(2) || 0.0,
     load_5: serverInfo.state.load_5?.toFixed(2) || 0.0,
     load_15: serverInfo.state.load_15?.toFixed(2) || 0.0,
-    public_note: handlePublicNote(serverInfo.id, serverInfo.public_note || ""),
+    public_note: handlePublicNote(serverInfo.uuid || serverInfo.id, serverInfo.public_note || ""),
     traffic_limit: serverInfo.traffic_limit || 0,
     traffic_limit_type: serverInfo.traffic_limit_type || "sum",
+    traffic_reset_day: serverInfo.traffic_reset_day || 0,
     expired_at: serverInfo.expired_at || "",
   }
 }
@@ -501,21 +502,18 @@ export function parsePublicNote(publicNote: string): PublicNoteData | null {
   }
 }
 
-// Function to handle public_note with sessionStorage
-export function handlePublicNote(serverId: number, publicNote: string): string {
-  const storageKey = `server_${serverId}_public_note`
-  const storedNote = sessionStorage.getItem(storageKey)
+// Cache only current public_note values. Never resurrect an empty note from old
+// storage, otherwise deleted/recreated nodes can inherit stale card metadata.
+export function handlePublicNote(serverKey: string | number, publicNote: string): string {
+  const storageKey = `server_${serverKey}_public_note`
 
-  if (!publicNote && storedNote) {
-    return storedNote
+  if (!publicNote) {
+    sessionStorage.removeItem(storageKey)
+    return ""
   }
 
-  if (publicNote) {
-    sessionStorage.setItem(storageKey, publicNote)
-    return publicNote
-  }
-
-  return ""
+  sessionStorage.setItem(storageKey, publicNote)
+  return publicNote
 }
 
 export const uuidToNumber = (uuid: string): number => {
@@ -564,12 +562,14 @@ const TAG_COLOR_EXTRACT = new RegExp(`<\\s*(${TAG_COLORS.join("|")})\\s*>`, "i")
 const TAG_COLOR_REMOVE = new RegExp(`<\\s*(?:${TAG_COLORS.join("|")})\\s*>`, "ig")
 const TAG_CURRENCY_EXTRACT = new RegExp(`<\\s*(${TAG_CURRENCIES.join("|")})\\s*>`, "i")
 const TAG_CURRENCY_REMOVE = new RegExp(`<\\s*(?:${TAG_CURRENCIES.join("|")})\\s*>`, "ig")
+const TAG_TRAFFIC_RESET_EXTRACT = /<\s*TRD\s*:\s*(\d{1,2})\s*>/i
+const TAG_TRAFFIC_RESET_REMOVE = /<\s*TRD\s*:\s*\d{1,2}\s*>/ig
 
-// 解析 tags 字段:抽出货币元数据(如 <JPY>),同时返回清洗后的人类可读文本(去掉所有 <...> 元标签)。
-// currency tag 设计为纯元数据,不在 UI 上显示——金额前缀已经会显示 "JPY 12800",再标记一次就重复。
-export function parseTagMetadata(tags: string): { text: string; currency: string } {
+// 解析 tags 字段:抽出货币/流量重置日元数据(如 <JPY>、<TRD:1>),同时返回清洗后的人类可读文本。
+export function parseTagMetadata(tags: string): { text: string; currency: string; trafficResetDay?: number } {
   if (!tags) return { text: "", currency: "" }
   let currency = ""
+  let trafficResetDay: number | undefined
   const cleanedParts: string[] = []
   for (const rawPart of tags.split(";")) {
     const part = rawPart.trim()
@@ -581,18 +581,64 @@ export function parseTagMetadata(tags: string): { text: string; currency: string
       if (m) currency = m[1].toUpperCase()
     }
 
+    if (!trafficResetDay) {
+      const m = part.match(TAG_TRAFFIC_RESET_EXTRACT)
+      const day = m ? parseTrafficResetDay(m[1]) : undefined
+      if (day) trafficResetDay = day
+    }
+
     const colorMatch = part.match(TAG_COLOR_EXTRACT)
     const color = colorMatch ? colorMatch[1] : ""
-    const text = part.replace(TAG_COLOR_REMOVE, "").replace(TAG_CURRENCY_REMOVE, "").trim()
+    const text = part.replace(TAG_COLOR_REMOVE, "").replace(TAG_CURRENCY_REMOVE, "").replace(TAG_TRAFFIC_RESET_REMOVE, "").trim()
     if (!text) continue
     cleanedParts.push(color ? `${color}:${text}` : text)
   }
-  return { text: cleanedParts.join(","), currency }
+  return { text: cleanedParts.join(","), currency, trafficResetDay }
 }
 
-// 清洗 tags 用于显示;currency tag 在此被静默剥离。
+// 清洗 tags 用于显示;元标签在此被静默剥离。
 function sanitizeTags(tags: string): string {
   return parseTagMetadata(tags).text
+}
+
+function parseJsonObject(value: unknown): Record<string, unknown> {
+  if (!value) return {}
+  if (typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>
+  if (typeof value !== "string" || !value.trim()) return {}
+
+  try {
+    const parsed = JSON.parse(value)
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function parseTrafficResetDay(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === "") return undefined
+  const day = Number(value)
+  if (!Number.isInteger(day) || day < 1 || day > 31) return undefined
+  return day
+}
+
+function resolveTrafficResetDay(server: any): number | undefined {
+  const tagResetDay = parseTagMetadata(typeof server?.tags === "string" ? server.tags : "").trafficResetDay
+  if (tagResetDay) return tagResetDay
+
+  const win = typeof window === "undefined" ? {} : (window as unknown as Record<string, unknown>) || {}
+  const overrides = parseJsonObject(win.TrafficResetDayOverrides)
+  const overrideKeys = [server?.uuid, server?.name, server?.id, server?.uuid ? String(uuidToNumber(String(server.uuid))) : ""]
+    .filter(Boolean)
+    .map(String)
+
+  for (const key of overrideKeys) {
+    if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+      const override = parseTrafficResetDay(overrides[key])
+      if (override) return override
+    }
+  }
+
+  return undefined
 }
 
 function buildPublicNoteFromNode(server: any, existingPublicNote?: string): string {
@@ -757,6 +803,7 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
     const uuid = server.uuid
     const status = statusMap.get(uuid)
     const countryCode = server?.region ? countryFlagToCode(String(server.region)) : ""
+    const trafficResetDay = resolveTrafficResetDay(server)
     // 已处理的 uuid 从映射中移除，避免后续增补阶段重复添加
     if (statusMap.has(uuid)) {
       statusMap.delete(uuid)
@@ -829,6 +876,7 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
       state,
       traffic_limit: server.traffic_limit || 0,
       traffic_limit_type: server.traffic_limit_type || "sum",
+      traffic_reset_day: trafficResetDay || 0,
       expired_at: server.expired_at || "",
       online: status ? status.online === true : false,
       tags: typeof server.tags === "string" ? server.tags : "",
@@ -836,52 +884,11 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
     }
   })
 
-  // 追加那些仅在 data 里出现但缓存里没有的新服务器（保证“出现过的都显示”）
-  for (const [uuid, status] of statusMap.entries()) {
-    const host = {
-      platform: status.os || "",
-      platform_version: status.kernel_version || "",
-      cpu: status.cpu_name ? [status.cpu_name] : [],
-      gpu: status.gpu_name ? [status.gpu_name] : [],
-      mem_total: status.ram_total || 0,
-      disk_total: status.disk_total || 0,
-      swap_total: status.swap_total || 0,
-      arch: status.arch || "",
-      boot_time: new Date(status.time).getTime() / 1000 - (status.uptime || 0),
-      version: "",
-    }
-
-    const state = {
-      cpu: status.cpu || 0,
-      mem_used: status.ram || 0,
-      swap_used: status.swap || 0,
-      disk_used: status.disk || 0,
-      net_in_transfer: status.net_total_down || 0,
-      net_out_transfer: status.net_total_up || 0,
-      net_in_speed: status.net_in || 0,
-      net_out_speed: status.net_out || 0,
-      uptime: status.uptime || 0,
-      load_1: status.load || 0,
-      load_5: status.load5 || 0,
-      load_15: status.load15 || 0,
-      tcp_conn_count: status.connections || 0,
-      udp_conn_count: status.connections_udp || 0,
-      process_count: status.process || 0,
-      temperatures: status.temp > 0 ? [{ Name: "CPU", Temperature: status.temp }] : [],
-      gpu: typeof status.gpu === "number" ? [status.gpu] : [],
-    }
-
-    servers.push({
-      uuid,
-      id: uuidToNumber(uuid),
-      name: status.name || uuid,
-      public_note: "",
-      last_active: status.time || "0000-00-00T00:00:00Z",
-      country_code: status.region ? countryFlagToCode(status.region) : "",
-      display_index: 0,
-      host,
-      state,
-      online: status.online === true,
+  // statusMap 剩余项是后端状态里出现、但节点表缓存里没有的 UUID。
+  // 不再直接追加这类“无元数据机器”，否则删除节点后旧 agent 状态会变成乱码卡片。
+  if (statusMap.size > 0) {
+    getKomariNodes(true).catch(() => {
+      // 下一轮轮询继续尝试刷新节点表
     })
   }
 
@@ -893,7 +900,11 @@ export const komariToNezhaWebsocketResponse = (data: any): NezhaWebsocketRespons
 
 let __nodesCache__ : any = null
 let __nodesCachePromise__: Promise<any> | null = null
-export const getKomariNodes = async () => {
+export const getKomariNodes = async (force = false) => {
+  if (force) {
+    __nodesCache__ = null
+  }
+
   // 命中缓存，直接返回
   if (__nodesCache__) {
     return __nodesCache__
